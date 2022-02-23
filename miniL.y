@@ -3,17 +3,17 @@
 #include "CodeNode.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 extern int row;
 extern int column;
+int temp_count = 0;
 void yyerror(const char *msg);
 %}
 
 %union{
   struct CodeNode *code_node;
-  int ival;
-  char *sval;
-  float fval;
-  struct T *tval;
+  int ival; //int_val
+  char *sval; //op_val
   /* put your types here */
 }
 
@@ -21,7 +21,7 @@ void yyerror(const char *msg);
 %locations
 
 /* lower predence */
-%nonassoc UMINUS
+//%nonassoc UMINUS
 
 /* higher precedence */
 
@@ -31,8 +31,8 @@ void yyerror(const char *msg);
 
 %token <ival> NUMBER
 %token <sval> IDENT
-%token SYNTAX
-%token Terms
+//%token SYNTAX
+//%token Terms
 %token INTEGER 
 %token FUNCTION
 %token BEGINPARAMS
@@ -89,6 +89,10 @@ void yyerror(const char *msg);
 %type <code_node> Statements
 %type <code_node> Statement
 %type <code_node> Var
+%type <code_node> Expression
+%type <code_node> Multiplicative_Expr
+%type <code_node> Term
+%type <sval> Identifier
 
 %% 
 
@@ -113,7 +117,9 @@ Functions: %empty {
   $$ = node;
 };
 
-Identifier: IDENT {printf("Identifer -> IDENT %s \n", $1);};
+Identifier: IDENT {
+  $$ = $1;
+};
 
 Function: FUNCTION Identifier SEMI BEGINPARAMS Declarations ENDPARAMS BEGINLOCALS Declarations ENDLOCALS BEGINBODY Statements ENDBODY {
 
@@ -121,7 +127,7 @@ Function: FUNCTION Identifier SEMI BEGINPARAMS Declarations ENDPARAMS BEGINLOCAL
   std::string func_name = $2;
   node->code = "";
   // add the "func func_name"
-  node->code += std::string("func ") + func_name
+  node->code += std::string("func ") + func_name;
   
 
   //add the params declaration code
@@ -154,7 +160,7 @@ Declarations: %empty {
 Declaration: Identifier COLON INTEGER {
   CodeNode *code_node = new CodeNode;
   std::string id = $1;
-  code_node->code = std::string(". ") + id + std::string("\n");
+  code_node->code += std::string(". ") + id + std::string("\n");
   $$ = code_node;
 } | Identifier COLON ARRAY LBRACKET NUMBER RBRACKET OF INTEGER {
   //exercise **TO DO**
@@ -183,8 +189,8 @@ Statement: Var ASSIGN Expression {
   CodeNode *code_node2 = $3;
   CodeNode *node = new CodeNode;
   node->code = "";
-  //node->code += expression->code;
-  node->code += std:: string("= ") + id + std::string(", ") + code_node1->code; //code_node1->code or code_node1->code.c_str() (???) 
+  node->code += code_node2->code;
+  node->code += std:: string("= ") + id + std::string(", ") + code_node2->name + std::string("\n"); //code_node1->code or code_node1->code.c_str() (???) 
   $$ = node;
 } | IF Bool_Exp THEN Statements Statementss ENDIF {
   CodeNode *node = new CodeNode;
@@ -230,38 +236,107 @@ Comp: EQ { printf("Comp -> '=='\n");};
 Expression: Multiplicative_Expr {
   CodeNode *code_node1 = $1;
   CodeNode *node = new CodeNode;
-  node->code = code_node1.c_str();
+  std::string id = code_node1->name;
+  node->name = id;
+  node->code += code_node1->code;
   $$ = node;
 } | Multiplicative_Expr ADD Expression { //*************THE PARTS WITH [CodeNode *node = new CodeNode and $$ = node] are just placeholders************************
+  CodeNode *code_node1 = $1;
+  CodeNode *code_node2 = $3;
+  std::string temp = "_temp" + temp_count;
   CodeNode *node = new CodeNode;
+  node->name = temp;
+  node->code += ". " + temp + "\n" + "+ " + temp + ", " + code_node1->name + ", " + code_node2->name + "\n";
   $$ = node;
+  temp_count++;
 } | Multiplicative_Expr SUB Expression {
+  CodeNode *code_node1 = $1;
+  CodeNode *code_node2 = $3;
+  std::string temp = "_temp" + temp_count;
   CodeNode *node = new CodeNode;
+  node->name = temp;
+  node->code += ". " + temp + "\n" + "- " + temp + ", " + code_node1->name + ", " + code_node2->name + "\n";
   $$ = node;
+  temp_count++;
 };
+
+Expressions: Expression COMMA Expressions {printf("Expressions -> Expression ',' Expressions\n");};
+                     | Expression  {printf("Expressions -> Expression\n");};
 
 Multiplicative_Expr: Term {
   CodeNode *code_node1 = $1;
   CodeNode *node = new CodeNode;
-  node->code = code_node1.c_str();
+  std::string id = code_node1->name;
+  node->name = id;
+  node->code += code_node1->code;
   $$ = node;
-} | Multiplicative_Expr Term MULT Multiplicative_Expr {
+} | Term MULT Multiplicative_Expr {
+  CodeNode *code_node1 = $1;
+  CodeNode *code_node2 = $3;
+  std::string temp = "_temp" + temp_count;
   CodeNode *node = new CodeNode;
+  node->name = temp;
+  node->code += ". " + temp + "\n" + "* " + temp + ", " + code_node->name + ", " + code_node2->name + "\n";
   $$ = node;
-} | Multiplicative_Expr Term DIV Multiplicative_Expr {
+  temp_count++;
+} | Term DIV Multiplicative_Expr {
+  CodeNode *code_node1 = $1;
+  CodeNode *code_node2 = $3;
+  std::string temp = "_temp" + temp_count;
   CodeNode *node = new CodeNode;
+  node->name = temp;
+  node->code += ". " + temp + "\n" + "/ " + temp + ", " + code_node->name + ", " + code_node2->name + "\n";
   $$ = node;
-} | Multiplicative_Expr Term MOD Multiplicative_Expr {
+  temp_count++;
+} | Term MOD Multiplicative_Expr {
+  CodeNode *code_node1 = $1;
+  CodeNode *code_node2 = $3;
+  std::string temp = "_temp" + temp_count;
   CodeNode *node = new CodeNode;
+  node->name = temp;
+  node->code += ". " + temp + "\n" + "% " + temp + ", " + code_node->name + ", " + code_node2->name + "\n";
   $$ = node;
+  temp_count++;
 };
 
-Term: Var {printf("Term -> Var\n");};
-    | NUMBER {printf("Term -> NUMBER %d\n", $1);};
-    | LPAREN Expression RPAREN {printf("Term -> '(' Expression ')'\n");};
-    | Identifier LPAREN Expression RPAREN {printf("Term -> Identifier '(' ')'\n");};
-    | Identifier LPAREN Expression COMMA RPAREN {printf("Term -> Identifier '(' Expressions ')'\n");};
-    | Identifier LPAREN RPAREN {printf("Term -> '(' ')''\n");};
+// Term: Var {
+//   CodeNode *code_node1 = $1;
+//   std::string id = code_node1->name;
+//   CodeNode *node = new CodeNode;
+//   node->name = id;
+//   node->code += code_node1->code;
+//   $$ = node;
+// } | NUMBER {
+//   CodeNode *node = new CodeNode;
+//   $$ = node;
+// } | LPAREN Expression RPAREN {
+//   CodeNode *node = new CodeNode;
+//   $$ = node;
+// } | Identifier LPAREN Expression RPAREN {
+//   CodeNode *node = new CodeNode;
+//   $$ = node;
+// } | Identifier LPAREN Expression COMMA RPAREN {
+//   CodeNode *node = new CodeNode;
+//   $$ = node;
+// } | Identifier LPAREN RPAREN {
+//   CodeNode *node = new CodeNode;
+//   $$ = node;
+// };
+
+
+Term: Var {
+
+} | NUMBER {
+
+} | LPAREN Expression RPAREN {
+
+} | Identifier LPAREN Expression RPAREN {
+
+} | Identifier LPAREN RPAREN {
+
+} | Identifier LPAREN Expressions RPAREN {
+
+};
 
 Var: Identifier {
   //Expression
@@ -272,7 +347,7 @@ Var: Identifier {
   node->name = name;
   $$ = node;
 } | Identifier LBRACKET Expression RBRACKET {
-  //expresssion
+  //expresssion  *******************TODO*********************
   //a[10]
   CodeNode *node = new CodeNode;
   $$ = node;
