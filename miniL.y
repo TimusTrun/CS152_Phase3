@@ -92,6 +92,10 @@ void yyerror(const char *msg);
 %type <code_node> Expression
 %type <code_node> Multiplicative_Expr
 %type <code_node> Term
+%type <code_node> Expressions
+%type <code_node> Bool_Exp
+%type <code_node> Comp
+%type <code_node> Statementss
 %type <sval> Identifier
 
 %% 
@@ -163,7 +167,7 @@ Declaration: Identifier COLON INTEGER {
   code_node->code += std::string(". ") + id + std::string("\n");
   $$ = code_node;
 } | Identifier COLON ARRAY LBRACKET NUMBER RBRACKET OF INTEGER {
-  //exercise **TO DO**
+  //exercise ***********************TO DO*********************
   CodeNode *node = new CodeNode;
   $$ = node;
 };
@@ -179,8 +183,13 @@ Statements: Statement SEMI Statements {
   $$ = node;
 };
 
-Statementss: ELSE Statements {printf("Statementss -> ELSE Statements\n");};
-        | %empty {printf("Statementss -> epsilon\n");};
+Statementss: ELSE Statements {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+} | %empty {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+};
 
 Statement: Var ASSIGN Expression {
   //CodeNode *code_node1 = $1; //since this is a var is this correcT????
@@ -223,15 +232,33 @@ Statement: Var ASSIGN Expression {
 };
 
 
-Bool_Exp: Expression Comp Expression {printf("Bool_Exp -> Bool_Exps Expression Comp Expression\n");};
-        | NOT Bool_Exp{printf("BoolExp -> NOT BoolExp\n");};
+Bool_Exp: Expression Comp Expression {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+} | NOT Bool_Exp{
+  CodeNode *node = new CodeNode;
+  $$ = node;
+};
 
-Comp: EQ { printf("Comp -> '=='\n");};
-    | NEQ { printf("Comp -> '<>'\n");};
-    | LT  { printf("Comp -> '<'\n");};
-    | GT  { printf("Comp -> '>'\n");};
-    | LTE { printf("Comp -> '<='\n");};
-    | GTE { printf("Comp -> '>='\n");};
+Comp: EQ {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+} | NEQ {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+} | LT  {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+} | GT  {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+} | LTE {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+} | GTE {
+  CodeNode *node = new CodeNode;
+  $$ = node;
+};
 
 Expression: Multiplicative_Expr {
   CodeNode *code_node1 = $1;
@@ -260,8 +287,18 @@ Expression: Multiplicative_Expr {
   temp_count++;
 };
 
-Expressions: Expression COMMA Expressions {printf("Expressions -> Expression ',' Expressions\n");};
-                     | Expression  {printf("Expressions -> Expression\n");};
+Expressions: Expression COMMA Expressions {
+  CodeNode *code_node1 = $1;
+  CodeNode *code_node2 = $3;
+  CodeNode *node = new CodeNode;
+  node->code += code_node1->code + code_node2->code;
+  $$ = node;
+} | Expression  {
+  CodeNode *code_node1 = $1;
+  CodeNode *node = new CodeNode;
+  node->code += code_node1->code;
+  $$ = node;
+};
 
 Multiplicative_Expr: Term {
   CodeNode *code_node1 = $1;
@@ -327,15 +364,34 @@ Multiplicative_Expr: Term {
 Term: Var {
 
 } | NUMBER {
-
+  $$ = $1;
 } | LPAREN Expression RPAREN {
-
-} | Identifier LPAREN Expression RPAREN {
+  CodeNode *code_node1 = $2;
+  CodeNode *node = new CodeNode;
+  node->name = code_node1->name;
+  node->code = code_node1->code;
+  $$ = node;
+} | Identifier LPAREN Expression RPAREN { //127
+  CodeNode *node = new CodeNode;
+  std::string id = $1;
+  CodeNode *code_node1 = $3;
+  node->name = id;
+  node->code += code_node1->code;
+  $$ = node;
 
 } | Identifier LPAREN RPAREN {
-
+  CodeNode *node = new CodeNode;
+  std::string id = $1;
+  node->name = id;
+  node->code += "";
+  $$ = node;
 } | Identifier LPAREN Expressions RPAREN {
-
+  CodeNode *node = new CodeNode;
+  std::string id = $1;
+  CodeNode *code_node1 = $3;
+  node->name = id;
+  node->code += code_node1->code;
+  $$ = node;
 };
 
 Var: Identifier {
