@@ -6,8 +6,11 @@
 #include <string>
 extern int row;
 extern int column;
+extern FILE* yyin;
 int temp_count = 0;
+bool arr; //will tell me if im passing up an array or not
 void yyerror(const char *msg);
+extern int yylex();
 %}
 
 %union{
@@ -106,7 +109,7 @@ void yyerror(const char *msg);
 Program: Functions {
 
   CodeNode *code_node = $1;
-  printf("%s\n", code_node->code.c_str();
+  printf("%s\n", code_node->code.c_str());
 };
 
 Functions: %empty {
@@ -115,7 +118,7 @@ Functions: %empty {
 
 } | Function Functions {
   CodeNode *code_node1 = $1;
-  CodeNode *code_node 2= $2;
+  CodeNode *code_node2 = $2;
   CodeNode *node = new CodeNode;
   node->code = code_node1->code + code_node2->code;
   $$ = node;
@@ -131,12 +134,12 @@ Function: FUNCTION Identifier SEMI BEGINPARAMS Declarations ENDPARAMS BEGINLOCAL
   std::string func_name = $2;
   node->code = "";
   // add the "func func_name"
-  node->code += std::string("func ") + func_name;
+  node->code += std::string("func ") + func_name + ("\n");
   
 
   //add the params declaration code
   CodeNode *declarations = $5;
-  node->code += Declarations->code;
+  node->code += declarations->code;
 
   //add the locals declaration code
   CodeNode *locals = $8;
@@ -156,7 +159,7 @@ Declarations: %empty {
   CodeNode *code_node1 = $1;
   CodeNode *code_node2 = $3;
   CodeNode *node = new CodeNode;
-  nade->code = code_node1->code + code_node2->code;
+  node->code = code_node1->code + code_node2->code;
   $$ = node;
           
 };
@@ -167,8 +170,13 @@ Declaration: Identifier COLON INTEGER {
   code_node->code += std::string(". ") + id + std::string("\n");
   $$ = code_node;
 } | Identifier COLON ARRAY LBRACKET NUMBER RBRACKET OF INTEGER {
-  //exercise ***********************TO DO*********************
+  //exercise ***********************TO DO***********************
+  //declaration of array
+  //[] a, 20 (20 =size) 
   CodeNode *node = new CodeNode;
+  std::string id = $1;
+  std::string num = std::to_string($5);
+  node->code += std::string(".[] ") + id + std::string(", ") + num + std::string("\n");
   $$ = node;
 };
 
@@ -191,15 +199,16 @@ Statementss: ELSE Statements {
   $$ = node;
 };
 
+//boolean to detect if it is a array or integer
 Statement: Var ASSIGN Expression {
-  //CodeNode *code_node1 = $1; //since this is a var is this correcT????
+  //CodeNode *code_node1 = $1; //since this is a var is this correcT???? //Var was passed as an indentifier
   CodeNode *var = $1;
   std::string id = var->name;
   CodeNode *code_node2 = $3;
   CodeNode *node = new CodeNode;
   node->code = "";
   node->code += code_node2->code;
-  node->code += std:: string("= ") + id + std::string(", ") + code_node2->name + std::string("\n"); //code_node1->code or code_node1->code.c_str() (???) 
+  node->code += std:: string("= ") + id + std::string(", ") + code_node2->name + std::string("\n");  
   $$ = node;
 } | IF Bool_Exp THEN Statements Statementss ENDIF {
   CodeNode *node = new CodeNode;
@@ -214,12 +223,13 @@ Statement: Var ASSIGN Expression {
   CodeNode *node = new CodeNode;
   $$ = node;
 } | WRITE Var {
-  CodeNode *node = new CodeNode;
-  CodeNode *var = $2
-  std::string id = var->name
-  node->code = "";
-  node->code += std::string(".>") + id + std::string("\n");
-  $$ = node;
+      CodeNode *node = new CodeNode;
+      CodeNode *var = $2;
+      std::string id = var->name;
+      node->code = "";
+      node->code += var->code;
+      node->code += std::string(".> ") + id + std::string("\n");
+      $$ = node;
 } | CONTINUE {
   CodeNode *node = new CodeNode;
   $$ = node;
@@ -229,8 +239,18 @@ Statement: Var ASSIGN Expression {
 } | RETURN Expression {
   CodeNode *node = new CodeNode;
   $$ = node;
+} | Var LBRACKET Expression RBRACKET ASSIGN Expression {
+  //a[0] := b + c; -> [] = a, 0, _temp0
+  CodeNode *code_node1 = $3;
+  CodeNode *code_node2 = $6;
+  CodeNode *var = $1;
+  std::string id = var->name; 
+  CodeNode *node = new CodeNode;
+  node->name = id;
+  node->code += code_node1->code + code_node2->code;
+  node->code += "[]= " + id + ", " + code_node1->name + ", " + code_node2->name + "\n";
+  $$ = node;
 };
-
 
 Bool_Exp: Expression Comp Expression {
   CodeNode *node = new CodeNode;
@@ -270,18 +290,20 @@ Expression: Multiplicative_Expr {
 } | Multiplicative_Expr ADD Expression { //*************THE PARTS WITH [CodeNode *node = new CodeNode and $$ = node] are just placeholders************************
   CodeNode *code_node1 = $1;
   CodeNode *code_node2 = $3;
-  std::string temp = "_temp" + temp_count;
+  std::string temp = "_temp" + std::to_string(temp_count);
   CodeNode *node = new CodeNode;
   node->name = temp;
+  node->code += code_node1->code + code_node2->code;
   node->code += ". " + temp + "\n" + "+ " + temp + ", " + code_node1->name + ", " + code_node2->name + "\n";
   $$ = node;
   temp_count++;
 } | Multiplicative_Expr SUB Expression {
   CodeNode *code_node1 = $1;
   CodeNode *code_node2 = $3;
-  std::string temp = "_temp" + temp_count;
+  std::string temp = "_temp" + std::to_string(temp_count);
   CodeNode *node = new CodeNode;
   node->name = temp;
+  node->code += code_node1->code + code_node2->code;
   node->code += ". " + temp + "\n" + "- " + temp + ", " + code_node1->name + ", " + code_node2->name + "\n";
   $$ = node;
   temp_count++;
@@ -310,61 +332,47 @@ Multiplicative_Expr: Term {
 } | Term MULT Multiplicative_Expr {
   CodeNode *code_node1 = $1;
   CodeNode *code_node2 = $3;
-  std::string temp = "_temp" + temp_count;
+  std::string temp = "_temp" + std::to_string(temp_count);
   CodeNode *node = new CodeNode;
   node->name = temp;
-  node->code += ". " + temp + "\n" + "* " + temp + ", " + code_node->name + ", " + code_node2->name + "\n";
+  node->code += code_node1->code;
+  node->code += ". " + temp + "\n" + "* " + temp + ", " + code_node1->name + ", " + code_node2->name + "\n";
   $$ = node;
   temp_count++;
 } | Term DIV Multiplicative_Expr {
   CodeNode *code_node1 = $1;
   CodeNode *code_node2 = $3;
-  std::string temp = "_temp" + temp_count;
+  std::string temp = "_temp" + std::to_string(temp_count);
   CodeNode *node = new CodeNode;
   node->name = temp;
-  node->code += ". " + temp + "\n" + "/ " + temp + ", " + code_node->name + ", " + code_node2->name + "\n";
+  node->code += code_node1->code;
+  node->code += ". " + temp + "\n" + "/ " + temp + ", " + code_node1->name + ", " + code_node2->name + "\n";
   $$ = node;
   temp_count++;
 } | Term MOD Multiplicative_Expr {
   CodeNode *code_node1 = $1;
   CodeNode *code_node2 = $3;
-  std::string temp = "_temp" + temp_count;
+  std::string temp = "_temp" + std::to_string(temp_count);
   CodeNode *node = new CodeNode;
   node->name = temp;
-  node->code += ". " + temp + "\n" + "% " + temp + ", " + code_node->name + ", " + code_node2->name + "\n";
+  node->code += code_node1->code;
+  node->code += ". " + temp + "\n" + "% " + temp + ", " + code_node1->name + ", " + code_node2->name + "\n";
   $$ = node;
   temp_count++;
 };
 
-// Term: Var {
-//   CodeNode *code_node1 = $1;
-//   std::string id = code_node1->name;
-//   CodeNode *node = new CodeNode;
-//   node->name = id;
-//   node->code += code_node1->code;
-//   $$ = node;
-// } | NUMBER {
-//   CodeNode *node = new CodeNode;
-//   $$ = node;
-// } | LPAREN Expression RPAREN {
-//   CodeNode *node = new CodeNode;
-//   $$ = node;
-// } | Identifier LPAREN Expression RPAREN {
-//   CodeNode *node = new CodeNode;
-//   $$ = node;
-// } | Identifier LPAREN Expression COMMA RPAREN {
-//   CodeNode *node = new CodeNode;
-//   $$ = node;
-// } | Identifier LPAREN RPAREN {
-//   CodeNode *node = new CodeNode;
-//   $$ = node;
-// };
-
-
 Term: Var {
-
+  CodeNode *code_node1 = $1;
+  CodeNode *node = new CodeNode;
+  node->name = code_node1->name;
+  node->code += code_node1->code;
+  $$ = node;
 } | NUMBER {
-  $$ = $1;
+  std::string id = std::to_string($1);
+  CodeNode *node = new CodeNode;
+  node->name = id;
+  node->code = "";
+  $$ = node;
 } | LPAREN Expression RPAREN {
   CodeNode *code_node1 = $2;
   CodeNode *node = new CodeNode;
@@ -397,6 +405,7 @@ Term: Var {
 Var: Identifier {
   //Expression
   //a
+  arr = false;
   std::string name = $1;
   CodeNode *node = new CodeNode;
   node->code = "";
@@ -404,8 +413,16 @@ Var: Identifier {
   $$ = node;
 } | Identifier LBRACKET Expression RBRACKET {
   //expresssion  *******************TODO*********************
-  //a[10]
+  //Write a[10] -> []=_temp0, a, 10
+  //can put name of array and index of array
+  arr = true;
+  CodeNode *code_node1 = $3;
+  std::string id = $1;
   CodeNode *node = new CodeNode;
+  std::string temp = "_temp" + std::to_string(temp_count);
+  node->name = id;
+  node->code += code_node1->code;
+  node->code += std::string("=[] ") + temp + std::string(", ") + id + std::string(", ") + code_node1->name + std::string("\n");
   $$ = node;
 }
 

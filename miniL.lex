@@ -1,6 +1,7 @@
 /* cs152-phase1*/
 
-%{   
+%{ 
+   #include "miniL-parser.hpp"
    int row= 1;
    int column = 1;
 %}
@@ -63,7 +64,7 @@ COMMENT     ##.*
 {DIGIT}+       {column += yyleng;yylval.ival = atoi(yytext); return NUMBER;}
 {START}+       {printf("Error at line %i, column %i: identifier \"%s\" must begin with a letter", row, column, yytext); } //fix?
 {END}+         {printf("Error at line %i, column %i: identifier \"%s\" cannot end with an underscore", row, column, yytext); } //fix?
-{IDENTIFIER}+  {column += yyleng;yylval.sval = strdup(yytext); return IDENT;}
+{IDENTIFIER}+  {column += yyleng; yylval.sval = strdup(yytext); return IDENT;} //get rid of later
 ";"            {column += yyleng;return SEMI;}
 ":"            {column += yyleng;return COLON;}
 ","            {column += yyleng;return COMMA;}
