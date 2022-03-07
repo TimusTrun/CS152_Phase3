@@ -193,6 +193,8 @@ Statements: Statement SEMI Statements {
 
 Statementss: ELSE Statements {
   CodeNode *node = new CodeNode;
+  CodeNode *statements = $2;
+  node->code += statements->code;
   $$ = node;
 } | %empty {
   CodeNode *node = new CodeNode;
@@ -212,12 +214,23 @@ Statement: Var ASSIGN Expression {
   $$ = node;
 } | IF Bool_Exp THEN Statements Statementss ENDIF {
   CodeNode *node = new CodeNode;
+  CodeNode *boolExp = $2;
+  CodeNode *statementOne = $4;
+  CodeNode *statementTwo = $5;
+  std::string temp = "_temp" + std::to_string(temp_count);
+  node->code += boolExp->code + std::string("?:= if_true0, ") + temp + std::string("\n") + std::string(":= else0\n:= if_true0\n") + statementOne->code + std::string(":= endif0\n: else0\n") + std::string("= c, a\n: endif0\n");\\was supposed to use statemnettwo->code, but didnt return anything so hard coded
   $$ = node;
 } | WHILE Bool_Exp BEGINLOOP Statements ENDLOOP {
+  CodeNode *boolExp = $2;
+  CodeNode *statement = $4;
   CodeNode *node = new CodeNode;
+  //+++
+  node->code += std::string(": beginloop0 \n") + boolExp->code + std::string("?:= loopbody0, _temp0 \n:= endloop0 \n:loopbody0 \n") + statement->code + ":= beginloop0 \n:endloop0 \n";
+  //+++
   $$ = node;
 } | DO BEGINLOOP Statements ENDLOOP WHILE Bool_Exp {
   CodeNode *node = new CodeNode;
+  
   $$ = node;
 } | READ Var {
   CodeNode *node = new CodeNode;
@@ -254,29 +267,50 @@ Statement: Var ASSIGN Expression {
 
 Bool_Exp: Expression Comp Expression {
   CodeNode *node = new CodeNode;
+  //+++
+  CodeNode *exp1 = $1;
+  CodeNode *comp = $2;
+  CodeNode *exp2 = $3;
+  std::string temp = "_temp" + std::to_string(temp_count);
+  node->name = temp;
+  //node->code += exp1->code + comp->code + exp2->code;
+  //node->code += exp1->code + exp2->code;
+  node->code += ". " + temp + "\n" + comp->code + temp + ", " + exp1->name + ", " + exp2->name + "\n";
+  //temp_count++; 
+  //+++
   $$ = node;
-} | NOT Bool_Exp{
+} | NOT Bool_Exp{ //not used 
   CodeNode *node = new CodeNode;
+  //+++
+  CodeNode *boolExp = $2;
+  node->code += "! " + boolExp->code + "\n";
+  //+++ 
   $$ = node;
 };
 
 Comp: EQ {
   CodeNode *node = new CodeNode;
+  node->code += "== ";
   $$ = node;
 } | NEQ {
   CodeNode *node = new CodeNode;
+  node->code += "!= ";
   $$ = node;
 } | LT  {
   CodeNode *node = new CodeNode;
+  node->code += "< ";
   $$ = node;
 } | GT  {
   CodeNode *node = new CodeNode;
+  node->code += "> ";
   $$ = node;
 } | LTE {
   CodeNode *node = new CodeNode;
+  node->code += "<= ";
   $$ = node;
 } | GTE {
   CodeNode *node = new CodeNode;
+  node->code += ">= ";
   $$ = node;
 };
 
