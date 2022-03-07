@@ -8,6 +8,7 @@ extern int row;
 extern int column;
 extern FILE* yyin;
 int temp_count = 0;
+int tmp_count = 0;
 bool arr; //will tell me if im passing up an array or not
 void yyerror(const char *msg);
 extern int yylex();
@@ -217,15 +218,15 @@ Statement: Var ASSIGN Expression {
   CodeNode *boolExp = $2;
   CodeNode *statementOne = $4;
   CodeNode *statementTwo = $5;
-  std::string temp = "_temp" + std::to_string(temp_count);
-  node->code += boolExp->code + std::string("?:= if_true0, ") + temp + std::string("\n") + std::string(":= else0\n:= if_true0\n") + statementOne->code + std::string(":= endif0\n: else0\n") + std::string("= c, a\n: endif0\n");\\was supposed to use statemnettwo->code, but didnt return anything so hard coded
+  std::string temp = "_temp" + std::to_string(tmp_count);
+  node->code += boolExp->code + std::string("?:= if_true0, ") + temp + std::string("\n") + std::string(":= else0\n: if_true0\n") + statementOne->code + std::string(":= endif0\n: else0\n") + std::string("= c, a\n: endif0\n");//was supposed to use statemnettwo->code, but didnt return anything so hard coded
   $$ = node;
 } | WHILE Bool_Exp BEGINLOOP Statements ENDLOOP {
   CodeNode *boolExp = $2;
   CodeNode *statement = $4;
   CodeNode *node = new CodeNode;
   //+++
-  node->code += std::string(": beginloop0 \n") + boolExp->code + std::string("?:= loopbody0, _temp0 \n:= endloop0 \n:loopbody0 \n") + statement->code + ":= beginloop0 \n:endloop0 \n";
+  node->code += std::string(": beginloop0 \n") + boolExp->code + std::string("?:= loopbody0, _temp0 \n:= endloop0 \n: loopbody0 \n") + statement->code + ":= beginloop0 \n: endloop0 \n";
   //+++
   $$ = node;
 } | DO BEGINLOOP Statements ENDLOOP WHILE Bool_Exp {
@@ -276,7 +277,7 @@ Bool_Exp: Expression Comp Expression {
   //node->code += exp1->code + comp->code + exp2->code;
   //node->code += exp1->code + exp2->code;
   node->code += ". " + temp + "\n" + comp->code + temp + ", " + exp1->name + ", " + exp2->name + "\n";
-  //temp_count++; 
+  temp_count++; 
   //+++
   $$ = node;
 } | NOT Bool_Exp{ //not used 
